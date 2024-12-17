@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Privado WebSocket</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    h1,
+    h3 {
+      color: #333;
+    }
+
+    input,
+    button,
+    select {
+      margin: 5px 0;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      margin: 5px 0;
+      padding: 10px;
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .message-you {
+      background: #e1f7d5;
+      /* Verde claro para mensagens enviadas */
+    }
+
+    .message-others {
+      background: #f7d5d5;
+      /* Vermelho claro para mensagens recebidas */
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Chat Privado WebSocket</h1>
+
+  <!-- Registro de usuário -->
+  <div>
+    <input id="username" placeholder="Digite seu nome de usuário" />
+    <button onclick="register()">Registrar</button>
+  </div>
+
+  <br />
+
+  <!-- Envio de mensagens privadas -->
+  <div>
+    <h3>Enviar Mensagem Privada</h3>
+    <select id="recipient">
+      <option value="" disabled selected>Selecione um destinatário</option>
+    </select>
+    <br />
+    <input id="message" placeholder="Digite uma mensagem" />
+    <button onclick="sendPrivateMessage()">Enviar</button>
+  </div>
+
+  <br />
+
+  <!-- Exibição de mensagens -->
+  <div>
+    <h3>Mensagens</h3>
+    <ul id="messages"></ul>
+  </div>
+
+  <br />
+
+  <!-- Exibição de usuários online -->
+  <div>
+    <h3>Usuários Online</h3>
+    <ul id="users"></ul>
+  </div>
+
+  <script>
+    const socket = io('http://localhost:3000');
+
+    // Atualizar lista de usuários conectados
+    socket.on('users', (users) => {
+      const userList = document.getElementById('users');
+      const recipientSelect = document.getElementById('recipient');
+
+      // Limpar as listas antes de preenchê-las
+      userList.innerHTML = '';
+      recipientSelect.innerHTML = '<option value="" disabled selected>Selecione um destinatário</option>';
+
+      // Preencher as listas com os nomes de usuário
+      users.forEach((user) => {
+        const li = document.createElement('li');
+        li.textContent = user; // Adiciona o nome do usuário na lista
+        userList.appendChild(li);
+
+        const option = document.createElement('option');
+        option.value = user; // Define o nome como valor
+        option.textContent = user; // Exibe o nome como texto
+        recipientSelect.appendChild(option);
+      });
+    });
+
+    // Receber mensagens privadas
+    socket.on('private_message', (data) => {
+      const li = document.createElement('li');
+
+      // Diferenciar mensagens enviadas e recebidas
+      if (data.from === 'Você') {
+        li.textContent = `Para ${document.getElementById('recipient').value}: ${data.message}`;
+        li.classList.add('message-you');
+      } else {
+        li.textContent = `De ${data.from}: ${data.message}`;
+        li.classList.add('message-others');
+      }
+
+      document.getElementById('messages').appendChild(li);
+    });
+
+    // Exibir mensagens de erro
+    socket.on('error', (error) => {
+      alert(error);
+    });
+
+    // Registrar nome de usuário
+    function register() {
+      const username = document.getElementById('username').value;
+      if (username) {
+        socket.emit('register', username);
+      } else {
+        alert('Digite um nome de usuário.');
+      }
+    }
+
+    // Enviar mensagem privada
+    function sendPrivateMessage() {
+      const recipient = document.getElementById('recipient').value;
+      const message = document.getElementById('message').value;
+      if (recipient && message) {
+        socket.emit('private_message', { to: recipient, message });
+      } else {
+        alert('Selecione um destinatário e digite uma mensagem.');
+      }
+    }
+  </script>
+</body>
+
+</html>
